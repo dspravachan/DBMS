@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
     APP_NAME: str = "ShopVista"
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
 
     class Config:
         env_file = ".env"
@@ -15,7 +16,10 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings():
-    return Settings()
+    settings_obj = Settings()
+    if settings_obj.DATABASE_URL.startswith("mysql://"):
+        settings_obj.DATABASE_URL = settings_obj.DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
+    return settings_obj
 
 
 settings = get_settings()
