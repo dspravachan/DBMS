@@ -1,9 +1,12 @@
 """ShopVista E-Commerce Backend — FastAPI Application Entry Point."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.config.settings import settings
-from app.database.session import engine, Base
+from app.database.session import engine, Base, get_db
+from app.models.models import User, Product, Order
 from app.routes import auth, products, categories, cart, wishlist, coupons, orders, invoice, admin
 
 # Create all database tables
@@ -53,3 +56,21 @@ def root():
 @app.get("/health", tags=["Root"])
 def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/db-status", tags=["Root"])
+def db_status(db: Session = Depends(get_db)):
+    """Public endpoint — confirms DB is live and shows record counts."""
+    user_count = db.query(func.count(User.id)).scalar()
+    product_count = db.query(func.count(Product.id)).scalar()
+    order_count = db.query(func.count(Order.id)).scalar()
+    return {
+        "status": "connected",
+        "database": "MySQL",
+        "records": {
+            "users": user_count,
+            "products": product_count,
+            "orders": order_count,
+        },
+        "message": f"{user_count} users, {product_count} products, {order_count} orders in database",
+    }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Users, ShoppingBag, DollarSign, Package } from 'lucide-react';
-import { adminService } from '../services/endpoints';
-import { formatPrice } from '../utils/formatters';
+import { adminService } from '../../services/endpoints';
+import { formatPrice } from '../../utils/formatters';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);

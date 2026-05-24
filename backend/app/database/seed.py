@@ -200,7 +200,7 @@ def seed():
                 db.add(Coupon(**c_data))
 
         db.commit()
-        print("✅ Database seeded successfully!")
+        print("[OK] Database seeded successfully!")
         print("   Admin:  admin@shopvista.com / admin123")
         print("   User:   user@shopvista.com / user123")
         print(f"   Products: {db.query(Product).count()}")
@@ -209,7 +209,7 @@ def seed():
 
     except Exception as e:
         db.rollback()
-        print(f"❌ Seeding error: {e}")
+        print(f"[ERROR] Seeding error: {e}")
         raise
     finally:
         db.close()
