@@ -26,7 +26,7 @@ const Checkout = () => {
         <h2 className="text-2xl font-bold text-slate-900 mb-4">Your cart is empty</h2>
         <p className="text-slate-500 mb-8">Add some items before proceeding to checkout.</p>
         <Link to="/products" className="bg-primary text-white px-8 py-3 rounded-full font-medium hover:bg-primary-dark transition-colors">
-          Browse Products
+          Browse Menu
         </Link>
       </div>
     );
@@ -111,7 +111,7 @@ const Checkout = () => {
             <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
               <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm">1</span>
-                Shipping Address
+                Delivery Address
               </h2>
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <div className="flex justify-between items-start">
@@ -215,7 +215,7 @@ const Checkout = () => {
                   </div>
                 )}
                 <div className="flex justify-between text-slate-500">
-                  <span>Shipping</span>
+                  <span>Delivery Fee</span>
                   <span className="text-emerald-600 font-medium">Free</span>
                 </div>
               </div>

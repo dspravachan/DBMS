@@ -75,7 +75,7 @@ def generate_invoice_pdf(order, user) -> io.BytesIO:
     elements = []
 
     # ── Header ──
-    elements.append(Paragraph("SHOPVISTA", title_style))
+    elements.append(Paragraph("FOODIE EXPRESS", title_style))
     elements.append(Paragraph("Tax Invoice / Receipt", subtitle_style))
     elements.append(HRFlowable(
         width="100%", thickness=2, color=colors.HexColor("#6C63FF"),
@@ -198,7 +198,7 @@ def generate_invoice_pdf(order, user) -> io.BytesIO:
         textColor=colors.HexColor("#9CA3AF"),
         alignment=TA_CENTER,
     )
-    elements.append(Paragraph("Thank you for shopping with ShopVista!", footer_style))
+    elements.append(Paragraph("Thank you for ordering with FoodieExpress!", footer_style))
     elements.append(Paragraph("This is a computer-generated invoice and does not require a signature.", footer_style))
 
     doc.build(elements)

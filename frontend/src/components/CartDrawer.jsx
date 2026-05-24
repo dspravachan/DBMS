@@ -51,7 +51,7 @@ const CartDrawer = () => {
                   onClick={() => setIsCartOpen(false)}
                   className="mt-4 px-6 py-2 bg-primary text-white rounded-full font-medium hover:bg-primary-dark transition-colors"
                 >
-                  Start Shopping
+                  Browse Menu
                 </button>
               </div>
             ) : (
@@ -136,7 +136,7 @@ const CartDrawer = () => {
                     className="font-medium text-primary hover:text-primary-dark"
                     onClick={() => setIsCartOpen(false)}
                   >
-                    Continue Shopping
+                    Browse Menu
                     <span aria-hidden="true"> &rarr;</span>
                   </button>
                 </p>

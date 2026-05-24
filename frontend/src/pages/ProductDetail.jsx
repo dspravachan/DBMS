@@ -53,9 +53,9 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">Product not found</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-4">Dish not found</h2>
         <button onClick={() => navigate('/products')} className="text-primary hover:underline">
-          Return to products
+          Return to menu
         </button>
       </div>
     );
@@ -181,8 +181,8 @@ const ProductDetail = () => {
                   <ShieldCheck size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">1 Year Warranty</p>
-                  <p className="text-xs text-slate-500">Full protection included</p>
+                  <p className="text-sm font-semibold text-slate-900">Fresh Ingredients</p>
+                  <p className="text-xs text-slate-500">Sourced locally for best taste</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
@@ -199,8 +199,8 @@ const ProductDetail = () => {
                   <RefreshCcw size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">30-Day Returns</p>
-                  <p className="text-xs text-slate-500">Not satisfied? Return it for a full refund</p>
+                  <p className="text-sm font-semibold text-slate-900">Satisfaction Guaranteed</p>
+                  <p className="text-xs text-slate-500">Not hot or fresh? We'll make it right</p>
                 </div>
               </div>
             </div>

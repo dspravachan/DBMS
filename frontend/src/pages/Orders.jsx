@@ -79,7 +79,7 @@ const Orders = () => {
         <h2 className="text-2xl font-bold text-slate-900 mb-4">No orders yet</h2>
         <p className="text-slate-500 mb-8">When you place orders, they will appear here.</p>
         <Link to="/products" className="bg-primary text-white px-8 py-3 rounded-full font-medium hover:bg-primary-dark transition-colors">
-          Start Shopping
+          Browse Menu
         </Link>
       </div>
     );

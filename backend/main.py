@@ -1,4 +1,4 @@
-"""ShopVista E-Commerce Backend — FastAPI Application Entry Point."""
+"""FoodieExpress Food Ordering Backend — FastAPI Application Entry Point."""
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware

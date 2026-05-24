@@ -9,7 +9,7 @@ const AdminLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-    { name: 'Products', path: '/admin/products', icon: Package },
+    { name: 'Menu', path: '/admin/products', icon: Package },
     { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
     { name: 'Coupons', path: '/admin/coupons', icon: Tag },
   ];
@@ -20,7 +20,7 @@ const AdminLayout = () => {
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-slate-800">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white font-bold mr-3">
-            S
+            🍔
           </div>
           <span className="font-bold text-lg text-white">Admin Panel</span>
         </div>
@@ -54,7 +54,7 @@ const AdminLayout = () => {
             className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition-colors w-full text-left"
           >
             <Store size={20} className="text-slate-400" />
-            View Store
+            View Site
           </Link>
           <button
             onClick={() => logout()}

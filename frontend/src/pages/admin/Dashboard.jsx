@@ -35,7 +35,7 @@ const Dashboard = () => {
   const statCards = [
     { title: 'Total Revenue', value: formatPrice(stats?.total_revenue || 0), icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
     { title: 'Total Orders', value: stats?.total_orders || 0, icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { title: 'Total Products', value: stats?.total_products || 0, icon: Package, color: 'text-purple-500', bg: 'bg-purple-50' },
+    { title: 'Total Dishes', value: stats?.total_products || 0, icon: Package, color: 'text-purple-500', bg: 'bg-purple-50' },
     { title: 'Total Users', value: stats?.total_users || 0, icon: Users, color: 'text-amber-500', bg: 'bg-amber-50' },
   ];
 
@@ -61,13 +61,13 @@ const Dashboard = () => {
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
-        <h2 className="text-xl font-bold text-slate-900 mb-4">Welcome to ShopVista Admin</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-4">Welcome to FoodieExpress Admin</h2>
         <p className="text-slate-500 max-w-2xl mx-auto mb-8">
-          Manage your products, view orders, create discount coupons, and monitor your store's performance from this dashboard.
+          Manage your menu items, view orders, create discount coupons, and monitor your restaurant's performance from this dashboard.
         </p>
         <div className="flex justify-center gap-4">
           <a href="/admin/products" className="bg-primary text-white px-6 py-2.5 rounded-lg font-medium hover:bg-primary-dark transition-colors">
-            Manage Products
+            Manage Menu
           </a>
           <a href="/admin/orders" className="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-lg font-medium hover:bg-slate-200 transition-colors">
             View Recent Orders

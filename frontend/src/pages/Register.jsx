@@ -20,7 +20,7 @@ const Register = () => {
     setLoading(true);
     try {
       await register(formData);
-      toast.success('Account created! Welcome to ShopVista 🎉');
+      toast.success('Account created! Welcome to FoodieExpress 🎉');
       navigate('/');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Registration failed. Please try again.');

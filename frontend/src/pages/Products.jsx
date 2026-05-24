@@ -103,7 +103,7 @@ const Products = () => {
         
         {/* Mobile Filter Toggle */}
         <div className="md:hidden flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-slate-900">All Products</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Our Menu</h1>
           <button 
             onClick={() => setIsMobileFiltersOpen(true)}
             className="flex items-center gap-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 px-4 py-2 rounded-lg"
@@ -137,7 +137,7 @@ const Products = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg focus:ring-primary focus:border-primary text-sm"
-                  placeholder="Search products..."
+                  placeholder="Search dishes..."
                 />
               </div>
             </div>
@@ -196,7 +196,7 @@ const Products = () => {
                   onChange={(e) => handleFilterChange('in_stock', e.target.checked)}
                   className="rounded border-slate-300 text-primary focus:ring-primary"
                 />
-                <span className="text-sm text-slate-600">In Stock Only</span>
+                <span className="text-sm text-slate-600">Available Only</span>
               </label>
             </div>
 
@@ -213,7 +213,7 @@ const Products = () => {
         {/* Main Content */}
         <main className="flex-1">
           <div className="hidden md:flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">Products</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Menu Items</h1>
             
             {/* Desktop Sort */}
             <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ const Products = () => {
                 onChange={(e) => handleFilterChange('sort', e.target.value)}
                 className="text-sm border-none bg-transparent font-medium text-slate-900 focus:ring-0 cursor-pointer"
               >
-                <option value="newest">Newest Arrivals</option>
+                <option value="newest">Newest</option>
                 <option value="price_asc">Price: Low to High</option>
                 <option value="price_desc">Price: High to Low</option>
                 <option value="rating">Top Rated</option>
@@ -295,7 +295,7 @@ const Products = () => {
           ) : (
             <div className="text-center py-20 bg-white rounded-2xl border border-slate-100">
               <Search size={48} className="mx-auto text-slate-300 mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No products found</h3>
+              <h3 className="text-lg font-medium text-slate-900 mb-1">No dishes found</h3>
               <p className="text-slate-500 mb-6">Try adjusting your filters or search term.</p>
               <button 
                 onClick={clearFilters}

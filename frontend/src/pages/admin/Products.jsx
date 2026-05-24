@@ -70,10 +70,10 @@ const AdminProducts = () => {
 
       if (editingId) {
         await productService.update(editingId, payload);
-        toast.success('Product updated');
+        toast.success('Dish updated');
       } else {
         await productService.create(payload);
-        toast.success('Product created');
+        toast.success('Dish created');
       }
       closeModal();
       fetchData();
@@ -83,13 +83,13 @@ const AdminProducts = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
+    if (window.confirm('Are you sure you want to delete this dish?')) {
       try {
         await productService.delete(id);
-        toast.success('Product deleted');
+        toast.success('Dish deleted');
         fetchData();
       } catch (error) {
-        toast.error('Failed to delete product');
+        toast.error('Failed to delete dish');
       }
     }
   };
@@ -99,12 +99,12 @@ const AdminProducts = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Manage Products</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Manage Menu</h1>
         <button 
           onClick={() => openModal()}
           className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors"
         >
-          <Plus size={18} /> Add Product
+          <Plus size={18} /> Add Dish
         </button>
       </div>
 
@@ -113,10 +113,10 @@ const AdminProducts = () => {
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 text-slate-900 border-b border-slate-100 uppercase font-semibold text-xs tracking-wider">
               <tr>
-                <th className="px-6 py-4">Product</th>
+                <th className="px-6 py-4">Dish</th>
                 <th className="px-6 py-4">Category</th>
                 <th className="px-6 py-4">Price</th>
-                <th className="px-6 py-4">Stock</th>
+                <th className="px-6 py-4">Availability</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -133,7 +133,7 @@ const AdminProducts = () => {
                   <td className="px-6 py-4 font-medium text-slate-900">{formatPrice(product.price)}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock > 10 ? 'bg-emerald-100 text-emerald-800' : product.stock > 0 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
-                      {product.stock} in stock
+                      {product.stock > 0 ? `${product.stock} available` : 'Out of stock'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
@@ -155,12 +155,12 @@ const AdminProducts = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl w-full max-w-2xl p-8 animate-scale-in">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">{editingId ? 'Edit Dish' : 'Add New Dish'}</h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Dish Name</label>
                   <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-primary focus:border-primary" />
                 </div>
                 
@@ -170,7 +170,7 @@ const AdminProducts = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Stock Quantity</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Available Portions</label>
                   <input type="number" required value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-primary focus:border-primary" />
                 </div>
 
@@ -195,7 +195,7 @@ const AdminProducts = () => {
 
               <div className="flex justify-end gap-3 mt-8">
                 <button type="button" onClick={closeModal} className="px-6 py-2.5 border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary-dark transition-colors">{editingId ? 'Save Changes' : 'Create Product'}</button>
+                <button type="submit" className="px-6 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary-dark transition-colors">{editingId ? 'Save Changes' : 'Create Dish'}</button>
               </div>
             </form>
           </div>

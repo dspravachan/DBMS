@@ -27,12 +27,18 @@ const Login = () => {
   };
 
   const fillDemo = (type) => {
-    if (type === 'admin') {
-      setEmail('admin@shopvista.com');
+    const handleDemoAdmin = () => {
+      setEmail('admin@foodieexpress.com');
       setPassword('admin123');
-    } else {
-      setEmail('user@shopvista.com');
+    };
+    const handleDemoUser = () => {
+      setEmail('user@foodieexpress.com');
       setPassword('user123');
+    };
+    if (type === 'admin') {
+      handleDemoAdmin();
+    } else {
+      handleDemoUser();
     }
   };
 

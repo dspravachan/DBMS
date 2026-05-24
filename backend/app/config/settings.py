@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "super-secret-jwt-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
-    APP_NAME: str = "ShopVista"
+    APP_NAME: str = "FoodieExpress"
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000"
 
     class Config:

@@ -9,24 +9,25 @@ const Footer = () => {
           <div className="col-span-1 md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white font-bold">
-                S
+                🍔
               </div>
               <span className="font-bold text-xl tracking-tight">
-                Shop<span className="text-primary">Vista</span>
+                Foodie<span className="text-primary">Express</span>
               </span>
             </Link>
             <p className="text-sm text-slate-500 mb-4">
-              A modern AI-ready e-commerce platform built for the future.
+              Delicious food delivered hot & fresh to your doorstep — fast, easy, and always satisfying.
             </p>
           </div>
           
           <div>
-            <h3 className="font-semibold text-slate-900 mb-4">Shop</h3>
+            <h3 className="font-semibold text-slate-900 mb-4">Menu</h3>
             <ul className="space-y-2 text-sm text-slate-500">
-              <li><Link to="/products" className="hover:text-primary transition-colors">All Products</Link></li>
-              <li><Link to="/products?category=electronics" className="hover:text-primary transition-colors">Electronics</Link></li>
-              <li><Link to="/products?category=clothing" className="hover:text-primary transition-colors">Clothing</Link></li>
-              <li><Link to="/products?category=books" className="hover:text-primary transition-colors">Books</Link></li>
+              <li><Link to="/products" className="hover:text-primary transition-colors">Full Menu</Link></li>
+              <li><Link to="/products?category=burgers" className="hover:text-primary transition-colors">Burgers</Link></li>
+              <li><Link to="/products?category=pizza" className="hover:text-primary transition-colors">Pizza</Link></li>
+              <li><Link to="/products?category=drinks" className="hover:text-primary transition-colors">Drinks</Link></li>
+              <li><Link to="/products?category=desserts" className="hover:text-primary transition-colors">Desserts</Link></li>
             </ul>
           </div>
           
@@ -35,7 +36,7 @@ const Footer = () => {
             <ul className="space-y-2 text-sm text-slate-500">
               <li><a href="#" className="hover:text-primary transition-colors">Help Center</a></li>
               <li><a href="#" className="hover:text-primary transition-colors">Track Order</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Returns & Refunds</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Refunds & Cancellations</a></li>
               <li><a href="#" className="hover:text-primary transition-colors">Contact Us</a></li>
             </ul>
           </div>
@@ -52,7 +53,7 @@ const Footer = () => {
         
         <div className="border-t border-slate-100 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-slate-500">
-            &copy; {new Date().getFullYear()} ShopVista. All rights reserved.
+          © {new Date().getFullYear()} FoodieExpress. All rights reserved.
           </p>
           <div className="flex space-x-6 text-slate-400">
             <a href="#" className="hover:text-slate-600 transition-colors">
