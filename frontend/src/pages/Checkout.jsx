@@ -1,247 +1,288 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Check, ChevronRight, ShoppingBag, Tag, CreditCard } from 'lucide-react';
-import { useCart } from '../context/CartContext';
-import { couponService, orderService } from '../services/endpoints';
-import { formatPrice } from '../utils/formatters';
+import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { CreditCard, Wallet, Smartphone, Building2, CheckCircle, ShoppingBag } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api/axios';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
-const Checkout = () => {
-  const { cart, clearCart } = useCart();
-  const navigate = useNavigate();
-  
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [applyingCoupon, setApplyingCoupon] = useState(false);
+const PAYMENT_METHODS = [
+  { id: 'wallet',     label: 'Wallet',             icon: Wallet },
+  { id: 'card',       label: 'Credit/Debit Card',  icon: CreditCard },
+  { id: 'upi',        label: 'UPI',                icon: Smartphone },
+  { id: 'netbanking', label: 'Net Banking',         icon: Building2 },
+];
 
-  // If cart is empty, redirect to products
-  if (!cart?.items?.length) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mx-auto mb-6">
-          <ShoppingBag size={48} />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">Your cart is empty</h2>
-        <p className="text-slate-500 mb-8">Add some items before proceeding to checkout.</p>
-        <Link to="/products" className="bg-primary text-white px-8 py-3 rounded-full font-medium hover:bg-primary-dark transition-colors">
-          Browse Menu
-        </Link>
-      </div>
-    );
-  }
+export default function Checkout() {
+  const location  = useLocation();
+  const navigate  = useNavigate();
 
-  const handleApplyCoupon = async (e) => {
-    e.preventDefault();
-    if (!couponCode.trim()) return;
-    
-    setApplyingCoupon(true);
-    try {
-      // In a real app, the backend might calculate this based on the cart total
-      // Since our API currently takes just the code, we'll calculate it here for display
-      // But the final calculation happens on the server during order creation
-      const { data } = await couponService.apply({ code: couponCode });
-      
-      const coupon = data.coupon;
-      let calculatedDiscount = 0;
-      
-      if (cart.total < coupon.min_order_amount) {
-        toast.error(`Minimum order amount for this coupon is ${formatPrice(coupon.min_order_amount)}`);
-        setApplyingCoupon(false);
-        return;
+  // ── CartContext is the single source of truth for display ──────────────────
+  const { cartItems, clearCart } = useCart();
+
+  // Coupon / total passed from Cart page via navigation state
+  const { coupon, total: passedTotal } = location.state || {};
+
+  const [address,          setAddress]          = useState('');
+  const [method,           setMethod]           = useState('wallet');
+  const [walletBalance,    setWalletBalance]    = useState(0);
+  const [processing,       setProcessing]       = useState(false);
+  const [success,          setSuccess]          = useState(false);
+  const [syncing,          setSyncing]          = useState(false);
+  const [membershipInfo,   setMembershipInfo]   = useState(null); // { name, subscription_discount }
+
+  // Track if we've already done the backend sync this session
+  const syncDone = useRef(false);
+
+  // ── Compute totals from local cart (never trust a stale server response) ──
+  const subtotal          = cartItems.reduce((s, i) => s + parseFloat(i.price) * i.quantity, 0);
+  const couponDiscount    = coupon?.discount_amount ? parseFloat(coupon.discount_amount) : 0;
+  const afterCoupon       = subtotal - couponDiscount;
+  const membershipDiscount = membershipInfo
+    ? parseFloat(((afterCoupon * membershipInfo.subscription_discount) / 100).toFixed(2))
+    : 0;
+  // If a pre-calculated total was passed (from Cart page), trust it; otherwise compute locally
+  const orderTotal = passedTotal != null
+    ? parseFloat(passedTotal) - membershipDiscount
+    : subtotal - couponDiscount - membershipDiscount;
+
+  // ── Fetch wallet balance + membership info ────────────────────────────────
+  useEffect(() => {
+    api.get('/wallet')
+      .then(r => setWalletBalance(parseFloat(r.data.data?.balance || 0)))
+      .catch(() => {});
+    api.get('/memberships/my')
+      .then(r => { if (r.data.data?.subscription_discount > 0) setMembershipInfo(r.data.data); })
+      .catch(() => {});
+  }, []);
+
+  // ── Sync local cart → backend DB so POST /orders can read it ──────────────
+  // Runs once when cartItems are ready (length > 0) and not yet synced.
+  useEffect(() => {
+    if (syncDone.current || cartItems.length === 0) return;
+
+    const sync = async () => {
+      setSyncing(true);
+      try {
+        // Clear backend cart first to avoid restaurant-mismatch errors
+        await api.delete('/cart').catch(() => {});
+        // Push all local items
+        for (const item of cartItems) {
+          await api.post('/cart', {
+            food_id:  item.food_id,
+            quantity: item.quantity,
+          }).catch(() => {});
+        }
+        syncDone.current = true;
+      } catch {
+        // Silent – order will still attempt with whatever is in the DB
+      } finally {
+        setSyncing(false);
       }
+    };
 
-      if (coupon.discount_type === 'percent') {
-        calculatedDiscount = cart.total * (coupon.discount_value / 100);
-      } else {
-        calculatedDiscount = coupon.discount_value;
-      }
+    sync();
+  }, [cartItems]);   // re-runs when cartItems first become non-empty
 
-      // Ensure discount doesn't exceed total
-      calculatedDiscount = Math.min(calculatedDiscount, cart.total);
-
-      setAppliedCoupon(coupon);
-      setDiscountAmount(calculatedDiscount);
-      toast.success('Coupon applied successfully!');
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Invalid or expired coupon');
-      setAppliedCoupon(null);
-      setDiscountAmount(0);
-    } finally {
-      setApplyingCoupon(false);
+  // ── Handle payment ────────────────────────────────────────────────────────
+  const handlePayment = async () => {
+    if (cartItems.length === 0) return toast.error('Your cart is empty');
+    if (!address.trim())        return toast.error('Please enter a delivery address');
+    if (method === 'wallet' && walletBalance < orderTotal) {
+      return toast.error(`Insufficient balance. Need ₹${(orderTotal - walletBalance).toFixed(2)} more.`);
     }
-  };
 
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setDiscountAmount(0);
-    setCouponCode('');
-  };
-
-  const handlePlaceOrder = async () => {
-    setLoading(true);
+    setProcessing(true);
     try {
-      const { data } = await orderService.create({
-        coupon_code: appliedCoupon ? appliedCoupon.code : null
+      // Re-sync just before placing (handles edge case where sync hadn't finished)
+      if (!syncDone.current) {
+        await api.delete('/cart').catch(() => {});
+        for (const item of cartItems) {
+          await api.post('/cart', { food_id: item.food_id, quantity: item.quantity }).catch(() => {});
+        }
+      }
+
+      await api.post('/orders', {
+        delivery_address:    address,
+        coupon_code:         coupon?.code || null,
+        special_instructions: '',
+        payment_method:      method,
       });
-      
+
       clearCart();
-      toast.success('Order placed successfully!');
-      navigate(`/orders/${data.id}`);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to place order');
+      setSuccess(true);
+      setTimeout(() => navigate('/orders'), 3000);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Payment failed. Please try again.');
     } finally {
-      setLoading(false);
+      setProcessing(false);
     }
   };
 
-  const finalTotal = Math.max(0, cart.total - discountAmount);
-
-  return (
-    <div className="bg-slate-50 min-h-screen py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row gap-12">
-          
-          {/* Main Checkout Area */}
-          <div className="w-full lg:w-2/3 space-y-8">
-            <h1 className="text-3xl font-bold text-slate-900 mb-8">Checkout</h1>
-
-            {/* Simulated Address/Shipping Section */}
-            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm">1</span>
-                Delivery Address
-              </h2>
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium text-slate-900">John Doe</p>
-                    <p className="text-slate-500 mt-1 text-sm">123 Tech Park, Phase 1</p>
-                    <p className="text-slate-500 text-sm">Bangalore, Karnataka 560001</p>
-                    <p className="text-slate-500 mt-2 text-sm">+91 9876543210</p>
-                  </div>
-                  <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full">Default</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Simulated Payment Section */}
-            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm">2</span>
-                Payment Method
-              </h2>
-              <div className="border border-primary rounded-xl p-4 bg-primary/5 flex items-center gap-4 cursor-pointer relative overflow-hidden">
-                <div className="w-5 h-5 rounded-full border-4 border-primary bg-white flex-shrink-0"></div>
-                <CreditCard className="text-primary" size={24} />
-                <div>
-                  <p className="font-medium text-slate-900">Cash on Delivery (COD)</p>
-                  <p className="text-slate-500 text-sm">Pay when your order arrives.</p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Order Summary */}
-          <div className="w-full lg:w-1/3">
-            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm sticky top-24">
-              <h2 className="text-xl font-bold text-slate-900 mb-6">Order Summary</h2>
-              
-              <div className="space-y-4 mb-6 max-h-[40vh] overflow-y-auto pr-2">
-                {cart.items.map((item) => (
-                  <div key={item.id} className="flex gap-4">
-                    <img 
-                      src={item.product.image_url || 'https://via.placeholder.com/64'} 
-                      alt={item.product.name}
-                      className="w-16 h-16 object-cover rounded-lg border border-slate-100"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-900 text-sm line-clamp-1">{item.product.name}</p>
-                      <p className="text-slate-500 text-xs mt-1">Qty: {item.quantity}</p>
-                      <p className="font-medium text-slate-900 mt-1">{formatPrice(item.product.price * item.quantity)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <hr className="border-slate-100 mb-6" />
-
-              {/* Coupon Section */}
-              <div className="mb-6">
-                {!appliedCoupon ? (
-                  <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                      <input
-                        type="text"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        placeholder="Discount code"
-                        className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-primary focus:border-primary uppercase"
-                      />
-                    </div>
-                    <button 
-                      type="submit"
-                      disabled={applyingCoupon || !couponCode}
-                      className="bg-slate-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-50 transition-colors"
-                    >
-                      Apply
-                    </button>
-                  </form>
-                ) : (
-                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 p-3 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Check className="text-emerald-500" size={16} />
-                      <span className="font-mono text-sm font-semibold text-emerald-700">{appliedCoupon.code}</span>
-                    </div>
-                    <button onClick={removeCoupon} className="text-slate-400 hover:text-slate-600">
-                      <X size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3 text-sm mb-6">
-                <div className="flex justify-between text-slate-500">
-                  <span>Subtotal</span>
-                  <span className="font-medium text-slate-900">{formatPrice(cart.total)}</span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-emerald-600 font-medium">
-                    <span>Discount</span>
-                    <span>-{formatPrice(discountAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-slate-500">
-                  <span>Delivery Fee</span>
-                  <span className="text-emerald-600 font-medium">Free</span>
-                </div>
-              </div>
-
-              <hr className="border-slate-100 mb-6" />
-
-              <div className="flex justify-between items-end mb-8">
-                <span className="text-lg font-bold text-slate-900">Total</span>
-                <span className="text-2xl font-extrabold text-primary">{formatPrice(finalTotal)}</span>
-              </div>
-
-              <button
-                onClick={handlePlaceOrder}
-                disabled={loading}
-                className="w-full bg-primary hover:bg-primary-dark text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-70"
-              >
-                {loading ? 'Processing...' : 'Place Order'}
-                {!loading && <ChevronRight size={20} />}
-              </button>
-            </div>
-          </div>
-
-        </div>
-      </div>
+  // ── Success screen ────────────────────────────────────────────────────────
+  if (success) return (
+    <div className="min-h-screen bg-[#0F1115] flex items-center justify-center">
+      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center">
+        <motion.div
+          initial={{ scale: 0 }} animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: 'spring' }}
+          className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6"
+        >
+          <CheckCircle size={48} className="text-green-400" />
+        </motion.div>
+        <h2 className="text-white text-2xl font-bold mb-2">Order Placed!</h2>
+        <p className="text-gray-400">Redirecting to your orders…</p>
+      </motion.div>
     </div>
   );
-};
 
-export default Checkout;
+  // ── Empty cart guard ──────────────────────────────────────────────────────
+  if (cartItems.length === 0) return (
+    <div className="min-h-screen bg-[#0F1115] pt-24 flex flex-col items-center justify-center gap-4">
+      <ShoppingBag size={56} className="text-gray-600" />
+      <p className="text-white text-xl font-bold">Your cart is empty</p>
+      <p className="text-gray-500 text-sm">Add items before checking out</p>
+      <button
+        onClick={() => navigate('/restaurants')}
+        className="mt-2 bg-[#FF8C42] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#FF7A2B] transition-colors"
+      >
+        Browse Restaurants
+      </button>
+    </div>
+  );
+
+  // ── Main checkout UI ──────────────────────────────────────────────────────
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      className="min-h-screen bg-[#0F1115] pt-24 pb-16 px-4"
+    >
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold text-white mb-8">Checkout</h1>
+        <div className="grid lg:grid-cols-2 gap-8">
+
+          {/* ── Left column ── */}
+          <div className="space-y-6">
+            {/* Delivery Address */}
+            <div className="bg-[#1A1D24] rounded-2xl p-6 border border-white/5">
+              <h3 className="text-white font-semibold mb-4">Delivery Address</h3>
+              <textarea
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                placeholder="Enter your full delivery address…"
+                rows={4}
+                className="w-full bg-[#22252E] text-white rounded-xl px-4 py-3 border border-white/10 focus:border-[#FF8C42] outline-none resize-none text-sm"
+              />
+            </div>
+
+            {/* Payment Method */}
+            <div className="bg-[#1A1D24] rounded-2xl p-6 border border-white/5">
+              <h3 className="text-white font-semibold mb-4">Payment Method</h3>
+              <div className="space-y-3">
+                {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
+                  <label
+                    key={id}
+                    className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
+                      method === id ? 'border-[#FF8C42] bg-[#FF8C42]/5' : 'border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <input type="radio" name="method" value={id}
+                      checked={method === id} onChange={() => setMethod(id)}
+                      className="hidden"
+                    />
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${method === id ? 'bg-[#FF8C42]/20' : 'bg-[#22252E]'}`}>
+                      <Icon size={18} className={method === id ? 'text-[#FF8C42]' : 'text-gray-400'} />
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium ${method === id ? 'text-white' : 'text-gray-300'}`}>{label}</p>
+                      {id === 'wallet' && (
+                        <p className="text-xs text-gray-500">Balance: ₹{walletBalance.toFixed(2)}</p>
+                      )}
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${method === id ? 'border-[#FF8C42]' : 'border-gray-600'}`}>
+                      {method === id && <div className="w-2.5 h-2.5 rounded-full bg-[#FF8C42]" />}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right column: Order Summary ── */}
+          <div className="bg-[#1A1D24] rounded-2xl p-6 border border-white/5 h-fit">
+            <h3 className="text-white font-semibold mb-4">Order Summary</h3>
+
+            {/* Item list */}
+            <div className="space-y-3 mb-6">
+              {cartItems.map(item => (
+                <div key={item.food_id} className="flex justify-between text-sm items-start gap-2">
+                  <span className="text-gray-300 truncate flex-1">
+                    {item.food_name || item.name} × {item.quantity}
+                  </span>
+                  <span className="text-gray-400 shrink-0">
+                    ₹{(parseFloat(item.price) * item.quantity).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Totals */}
+            <div className="border-t border-white/10 pt-4 space-y-2">
+              <div className="flex justify-between text-sm text-gray-400">
+                <span>Subtotal</span>
+                <span className="text-white">₹{subtotal.toFixed(2)}</span>
+              </div>
+              {coupon && (
+                <div className="flex justify-between text-sm text-green-400">
+                  <span>Coupon ({coupon.code})</span>
+                  <span>− ₹{couponDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              {membershipInfo && membershipDiscount > 0 && (
+                <div className="flex justify-between text-sm text-purple-400">
+                  <span>👑 {membershipInfo.name} ({membershipInfo.subscription_discount}% off)</span>
+                  <span>− ₹{membershipDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-lg pt-1">
+                <span className="text-white">Total</span>
+                <span className="text-[#FF8C42]">₹{orderTotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Wallet warning */}
+            {method === 'wallet' && walletBalance < orderTotal && (
+              <div className="mt-4 p-3 bg-red-500/10 rounded-xl border border-red-500/20 text-red-400 text-sm">
+                Insufficient balance. Need ₹{(orderTotal - walletBalance).toFixed(2)} more.
+                <button onClick={() => navigate('/wallet')} className="underline ml-1">Recharge</button>
+              </div>
+            )}
+
+            {/* Sync indicator */}
+            {syncing && (
+              <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                <div className="w-3 h-3 border border-gray-500 border-t-white rounded-full animate-spin" />
+                Syncing cart with server…
+              </div>
+            )}
+
+            {/* Pay button */}
+            <button
+              onClick={handlePayment}
+              disabled={processing || syncing || orderTotal <= 0}
+              className="w-full mt-6 bg-[#FF8C42] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#FF7A2B] transition-all hover:shadow-[0_0_30px_rgba(255,140,66,0.4)] disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {processing
+                ? <><div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full" /> Processing…</>
+                : syncing
+                  ? <><div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full" /> Preparing order…</>
+                  : `Pay ₹${orderTotal.toFixed(2)}`
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}

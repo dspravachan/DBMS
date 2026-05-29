@@ -1,67 +1,79 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/endpoints';
-import API from '../services/api';
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
+import { setLogoutCallback } from '../api/axios'
 
-const AuthContext = createContext();
+const AuthContext = createContext(null)
 
-export const useAuth = () => useContext(AuthContext);
-
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null)
+  const [token, setToken] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-    
-    if (storedUser && token) {
+    const storedToken = localStorage.getItem('mealmatrix_token')
+    const storedUser = localStorage.getItem('mealmatrix_user')
+    if (storedToken && storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
-        // Verify token by making a dummy request or just trust it until a 401 occurs
-      } catch (error) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+        const parsed = JSON.parse(storedUser)
+        // Guard against "undefined" string or non-object values
+        if (parsed && typeof parsed === 'object') {
+          setToken(storedToken)
+          setUser(parsed)
+        } else {
+          throw new Error('Invalid user object')
+        }
+      } catch (e) {
+        console.warn('Clearing corrupted auth session from localStorage:', e.message)
+        localStorage.removeItem('mealmatrix_token')
+        localStorage.removeItem('mealmatrix_user')
+        localStorage.removeItem('mealmatrix_cart')
       }
     }
-    setLoading(false);
-  }, []);
+    setLoading(false)
+  }, [])
 
-  const login = async (credentials) => {
-    const { data } = await authService.login(credentials);
-    localStorage.setItem('token', data.access_token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
-    return data.user;
-  };
+  // Register logout with axios so 401s cleanly clear React state
+  useEffect(() => {
+    setLogoutCallback(() => {
+      setUser(null)
+      setToken(null)
+    })
+    return () => setLogoutCallback(null)
+  }, [])
 
-  const register = async (userData) => {
-    const { data } = await authService.register(userData);
-    localStorage.setItem('token', data.access_token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
-    return data.user;
-  };
+  const login = (userData, userToken) => {
+    setUser(userData)
+    setToken(userToken)
+    localStorage.setItem('mealmatrix_token', userToken)
+    localStorage.setItem('mealmatrix_user', JSON.stringify(userData))
+  }
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-  };
+    setUser(null)
+    setToken(null)
+    localStorage.removeItem('mealmatrix_token')
+    localStorage.removeItem('mealmatrix_user')
+    localStorage.removeItem('mealmatrix_cart')
+  }
 
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
-    login,
-    register,
-    logout,
-    loading
-  };
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser)
+    localStorage.setItem('mealmatrix_user', JSON.stringify(updatedUser))
+  }
+
+  const isAuthenticated = !!token && !!user
+  const isAdmin = isAuthenticated && user?.role === 'admin'
 
   return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, isAuthenticated, isAdmin, loading }}>
+      {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) throw new Error('useAuth must be used within AuthProvider')
+  return context
+}
+
+export default AuthContext

@@ -1,343 +1,201 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import toast from 'react-hot-toast';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { User, Mail, Lock, Eye, EyeOff, Phone, Utensils, ArrowRight, CheckCircle } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import api from '../api/axios'
+import toast from 'react-hot-toast'
 
-const Register = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const { register } = useAuth();
-  const navigate = useNavigate();
+function PasswordStrength({ password }) {
+  const getStrength = () => {
+    if (!password) return { level: 0, label: '', color: '' }
+    let score = 0
+    if (password.length >= 8) score++
+    if (/[A-Z]/.test(password)) score++
+    if (/[0-9]/.test(password)) score++
+    if (/[^A-Za-z0-9]/.test(password)) score++
+    if (score <= 1) return { level: 1, label: 'Weak', color: 'bg-red-500' }
+    if (score <= 2) return { level: 2, label: 'Fair', color: 'bg-yellow-500' }
+    if (score <= 3) return { level: 3, label: 'Good', color: 'bg-blue-500' }
+    return { level: 4, label: 'Strong', color: 'bg-green-500' }
+  }
+  const { level, label, color } = getStrength()
+  if (!password) return null
+  return (
+    <div className="mt-2">
+      <div className="flex gap-1 mb-1">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= level ? color : 'bg-gray-700'}`} />
+        ))}
+      </div>
+      <p className={`text-xs ${level === 4 ? 'text-green-400' : level === 3 ? 'text-blue-400' : level === 2 ? 'text-yellow-400' : 'text-red-400'}`}>{label}</p>
+    </div>
+  )
+}
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+export default function Register() {
+  const { login } = useAuth()
+  const navigate = useNavigate()
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm_password: '' })
+  const [showPass, setShowPass] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  const handleChange = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
+
+  const validate = () => {
+    const errs = {}
+    if (!form.name.trim()) errs.name = 'Name is required'
+    if (!form.email.match(/^\S+@\S+\.\S+$/)) errs.email = 'Valid email required'
+    if (!form.phone.match(/^[6-9]\d{9}$/)) errs.phone = 'Valid 10-digit phone required'
+    if (form.password.length < 8) errs.password = 'Password must be at least 8 characters'
+    if (form.password !== form.confirm_password) errs.confirm_password = 'Passwords do not match'
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    if (!validate()) return
+    setLoading(true)
     try {
-      await register(formData);
-      toast.success('Account created! Welcome to FoodieExpress 🎉');
-      navigate('/');
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Registration failed. Please try again.');
+      const { data } = await api.post('/auth/register', { name: form.name, email: form.email, phone: form.phone, password: form.password })
+      const { user, token } = data.data
+      login(user, token)
+      toast.success('Welcome to MealMatrix! 🎉')
+      navigate('/')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Registration failed')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  const passwordStrength = () => {
-    const p = formData.password;
-    if (!p) return null;
-    if (p.length < 6) return { label: 'Weak', color: '#ef4444', width: '25%' };
-    if (p.length < 10) return { label: 'Fair', color: '#f59e0b', width: '55%' };
-    if (/[A-Z]/.test(p) && /[0-9]/.test(p)) return { label: 'Strong', color: '#10b981', width: '100%' };
-    return { label: 'Good', color: '#6C63FF', width: '80%' };
-  };
-
-  const strength = passwordStrength();
-
-  const inputStyle = {
-    width: '100%',
-    paddingLeft: '3rem',
-    paddingRight: '1rem',
-    paddingTop: '0.875rem',
-    paddingBottom: '0.875rem',
-    border: '2px solid #e2e8f0',
-    borderRadius: '12px',
-    fontSize: '0.95rem',
-    color: '#0f172a',
-    background: 'white',
-    outline: 'none',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-    boxSizing: 'border-box',
-  };
-
-  const iconStyle = {
-    position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)',
-    color: '#9ca3af', pointerEvents: 'none',
-  };
+  const fields = [
+    { name: 'name', label: 'Full Name', type: 'text', placeholder: 'Rahul Kumar', icon: <User size={16} /> },
+    { name: 'email', label: 'Email Address', type: 'email', placeholder: 'you@example.com', icon: <Mail size={16} /> },
+    { name: 'phone', label: 'Phone Number', type: 'tel', placeholder: '9876543210', icon: <Phone size={16} /> },
+  ]
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'stretch', fontFamily: "'Inter', sans-serif" }}>
-      {/* Left Branding Panel */}
-      <div style={{
-        display: 'none',
-        flex: '1',
-        background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        padding: '3rem',
-        color: 'white',
-      }} className="register-left-panel">
-        {/* Animated orbs */}
-        <div style={{
-          position: 'absolute', top: '5%', right: '-10%',
-          width: '450px', height: '450px', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.35) 0%, transparent 70%)',
-          animation: 'float 6s ease-in-out infinite',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: '5%', left: '-5%',
-          width: '350px', height: '350px', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(139,92,246,0.3) 0%, transparent 70%)',
-          animation: 'float 8s ease-in-out infinite reverse',
-        }} />
-
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '420px' }}>
-          <div style={{
-            fontSize: '4rem', marginBottom: '1.5rem',
-            animation: 'bounce 2s ease-in-out infinite',
-          }}>
-            🚀
-          </div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: '1.2', marginBottom: '1rem' }}>
-            Join{' '}
-            <span style={{ background: 'linear-gradient(90deg, #818cf8, #c084fc, #f472b6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              thousands
-            </span>
-            {' '}of happy shoppers
-          </h1>
-          <p style={{ opacity: 0.75, lineHeight: '1.7', fontSize: '1rem', marginBottom: '3rem' }}>
-            Create your free account and start exploring premium products with exclusive member benefits.
-          </p>
-
-          {/* Benefit chips */}
-          {[
-            '✓  Exclusive member-only deals',
-            '✓  Track orders in real-time',
-            '✓  Wishlist your favourites',
-            '✓  Free returns within 30 days',
-          ].map((text, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              marginBottom: '0.75rem', textAlign: 'left',
-              fontSize: '0.9rem', opacity: 0.9,
-            }}>
-              <span>{text}</span>
+    <div className="min-h-screen bg-bg font-inter flex">
+      {/* Left Panel */}
+      <motion.div
+        initial={{ opacity: 0, x: -40 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="hidden lg:flex flex-col justify-center w-1/2 relative overflow-hidden p-12"
+        style={{ background: 'linear-gradient(135deg, #0F1115 0%, #1A1D24 100%)' }}
+      >
+        <div className="absolute inset-0 opacity-25"
+          style={{ background: 'radial-gradient(ellipse at 30% 50%, rgba(255,140,66,0.5) 0%, transparent 60%)' }}
+        />
+        <div className="relative z-10">
+          <Link to="/" className="flex items-center gap-2 mb-12">
+            <div className="w-10 h-10 rounded-xl orange-gradient flex items-center justify-center"><Utensils size={20} className="text-white" /></div>
+            <span className="text-2xl font-black text-white">Meal<span className="gradient-text">Matrix</span></span>
+          </Link>
+          <h2 className="text-4xl font-black text-white mb-4 leading-tight">
+            Join 10,000+<br /><span className="gradient-text">happy subscribers</span>
+          </h2>
+          <p className="text-gray-muted text-lg mb-8">Create your account and start your healthy meal journey today.</p>
+          {['Free first week trial', 'Flexible pause/cancel anytime', '200+ meal plan choices', 'Delivered to your doorstep'].map(f => (
+            <div key={f} className="flex items-center gap-3 text-gray-soft mb-3">
+              <CheckCircle size={18} className="text-accent shrink-0" /> {f}
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Right Form Panel */}
-      <div style={{
-        flex: '1',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2rem',
-        background: '#fafbff',
-        position: 'relative',
-      }}>
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'radial-gradient(ellipse at 80% 10%, rgba(108,99,255,0.06) 0%, transparent 60%), radial-gradient(ellipse at 10% 90%, rgba(139,92,246,0.05) 0%, transparent 50%)',
-          pointerEvents: 'none',
-        }} />
+      {/* Right Form */}
+      <motion.div
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex-1 flex items-center justify-center p-8 overflow-y-auto"
+      >
+        <div className="w-full max-w-md">
+          <div className="lg:hidden mb-8 text-center">
+            <Link to="/" className="inline-flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl orange-gradient flex items-center justify-center"><Utensils size={20} className="text-white" /></div>
+              <span className="text-2xl font-black text-white">Meal<span className="gradient-text">Matrix</span></span>
+            </Link>
+          </div>
 
-        <div style={{ width: '100%', maxWidth: '440px', position: 'relative' }}>
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2.5rem' }}>
-            <div style={{
-              width: '44px', height: '44px', borderRadius: '14px',
-              background: 'linear-gradient(135deg, #6C63FF 0%, #8B5CF6 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.25rem', fontWeight: '900', color: 'white',
-              boxShadow: '0 8px 20px rgba(108,99,255,0.35)',
-            }}>
-              S
-            </div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-black text-white mb-2">Create Account</h1>
+            <p className="text-gray-muted">Start your healthy meal journey</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {fields.map(f => (
+              <div key={f.name}>
+                <label className="text-sm text-gray-soft font-medium block mb-1.5">{f.label}</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-muted">{f.icon}</span>
+                  <input
+                    type={f.type}
+                    name={f.name}
+                    value={form[f.name]}
+                    onChange={handleChange}
+                    placeholder={f.placeholder}
+                    className={`input-field pl-11 ${errors[f.name] ? 'border-red-500/50' : ''}`}
+                  />
+                </div>
+                {errors[f.name] && <p className="text-red-400 text-xs mt-1">{errors[f.name]}</p>}
+              </div>
+            ))}
+
             <div>
-              <div style={{ fontWeight: '800', fontSize: '1.25rem', color: '#0f172a' }}>
-                Shop<span style={{ color: '#6C63FF' }}>Vista</span>
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '500' }}>Join the community</div>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: '1.875rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem' }}>
-              Create your account ✨
-            </h2>
-            <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-              Already have an account?{' '}
-              <Link to="/login" style={{ color: '#6C63FF', fontWeight: '600', textDecoration: 'none' }}>
-                Sign in
-              </Link>
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            {/* Name */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                Full Name
-              </label>
-              <div style={{ position: 'relative' }}>
-                <div style={iconStyle}><User size={18} /></div>
+              <label className="text-sm text-gray-soft font-medium block mb-1.5">Password</label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-muted" />
                 <input
-                  id="register-name"
-                  type="text"
-                  name="name"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="John Doe"
-                  style={inputStyle}
-                  onFocus={e => { e.target.style.borderColor = '#6C63FF'; e.target.style.boxShadow = '0 0 0 4px rgba(108,99,255,0.1)'; }}
-                  onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                Email address
-              </label>
-              <div style={{ position: 'relative' }}>
-                <div style={iconStyle}><Mail size={18} /></div>
-                <input
-                  id="register-email"
-                  type="email"
-                  name="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="you@example.com"
-                  style={inputStyle}
-                  onFocus={e => { e.target.style.borderColor = '#6C63FF'; e.target.style.boxShadow = '0 0 0 4px rgba(108,99,255,0.1)'; }}
-                  onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                Password
-              </label>
-              <div style={{ position: 'relative' }}>
-                <div style={iconStyle}><Lock size={18} /></div>
-                <input
-                  id="register-password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPass ? 'text' : 'password'}
                   name="password"
-                  required
-                  value={formData.password}
+                  value={form.password}
                   onChange={handleChange}
-                  placeholder="Min. 6 characters"
-                  minLength={6}
-                  style={{ ...inputStyle, paddingRight: '3rem' }}
-                  onFocus={e => { e.target.style.borderColor = '#6C63FF'; e.target.style.boxShadow = '0 0 0 4px rgba(108,99,255,0.1)'; }}
-                  onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
+                  placeholder="Min 8 characters"
+                  className={`input-field pl-11 pr-11 ${errors.password ? 'border-red-500/50' : ''}`}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#9ca3af', padding: '0', display: 'flex',
-                  }}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-muted hover:text-white">
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-
-              {/* Password strength bar */}
-              {strength && (
-                <div style={{ marginTop: '0.6rem' }}>
-                  <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', width: strength.width,
-                      background: strength.color,
-                      borderRadius: '2px',
-                      transition: 'width 0.4s ease, background 0.3s',
-                    }} />
-                  </div>
-                  <p style={{ fontSize: '0.75rem', color: strength.color, marginTop: '0.3rem', fontWeight: '600' }}>
-                    {strength.label} password
-                  </p>
-                </div>
-              )}
+              <PasswordStrength password={form.password} />
+              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
 
-            {/* Terms note */}
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-              marginBottom: '1.5rem',
-              padding: '0.75rem 1rem',
-              background: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: '10px',
-            }}>
-              <CheckCircle size={16} style={{ color: '#10b981', flexShrink: 0, marginTop: '1px' }} />
-              <p style={{ fontSize: '0.78rem', color: '#065f46', lineHeight: '1.5' }}>
-                Your data is encrypted and secure. We never share your information with third parties.
-              </p>
+            <div>
+              <label className="text-sm text-gray-soft font-medium block mb-1.5">Confirm Password</label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-muted" />
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  name="confirm_password"
+                  value={form.confirm_password}
+                  onChange={handleChange}
+                  placeholder="Repeat password"
+                  className={`input-field pl-11 pr-11 ${errors.confirm_password ? 'border-red-500/50' : ''}`}
+                />
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-muted hover:text-white">
+                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {errors.confirm_password && <p className="text-red-400 text-xs mt-1">{errors.confirm_password}</p>}
             </div>
 
-            {/* Submit */}
-            <button
-              id="register-submit-btn"
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%', padding: '1rem',
-                background: loading ? '#a5b4fc' : 'linear-gradient(135deg, #6C63FF 0%, #8B5CF6 100%)',
-                color: 'white', border: 'none', borderRadius: '12px',
-                fontSize: '1rem', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                transition: 'all 0.3s',
-                boxShadow: loading ? 'none' : '0 8px 24px rgba(108,99,255,0.4)',
-              }}
-              onMouseEnter={e => { if (!loading) { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 12px 28px rgba(108,99,255,0.5)'; }}}
-              onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = loading ? 'none' : '0 8px 24px rgba(108,99,255,0.4)'; }}
-            >
-              {loading ? (
-                <>
-                  <div style={{
-                    width: '18px', height: '18px', border: '2px solid rgba(255,255,255,0.4)',
-                    borderTopColor: 'white', borderRadius: '50%',
-                    animation: 'spin 0.7s linear infinite',
-                  }} />
-                  Creating account...
-                </>
-              ) : (
-                <>
-                  Create free account
-                  <ArrowRight size={18} />
-                </>
-              )}
+            <button type="submit" disabled={loading} className="btn-primary w-full py-3.5 text-base flex items-center justify-center gap-2">
+              {loading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Creating account...</> : <>Create Account <ArrowRight size={18} /></>}
             </button>
           </form>
+
+          <p className="text-center text-gray-muted mt-6">
+            Already have an account?{' '}
+            <Link to="/login" className="text-accent hover:text-accent-hover font-semibold">Sign in</Link>
+          </p>
         </div>
-      </div>
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        @media (min-width: 768px) {
-          .register-left-panel { display: flex !important; }
-        }
-      `}</style>
+      </motion.div>
     </div>
-  );
-};
-
-export default Register;
+  )
+}
